@@ -277,7 +277,11 @@ def generate_cve_report(
     story.append(Spacer(1, 16))
     story.append(HRFlowable(width="100%", thickness=0.5, color=MID_GREY))
     story.append(Spacer(1, 4))
-   
+    story.append(Paragraph(
+        "CONFIDENTIAL. "
+        ,
+        styles["Footer"]
+    ))
 
     doc.build(story)
     logger.info(f"[Report] PDF saved to {output_path}")
