@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CVE Intelligence — National Cybsersec</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0e1a;
+      --surface:  #111827;
+      --border:   #1f2d45;
+      --accent:   #e94560;
+      --green:    #00ff9d;
+      --muted:    #4a5568;
+      --text:     #e2e8f0;
+      --mono:     'Share Tech Mono', monospace;
+      --sans:     'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(233,69,96,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(0,255,157,0.04) 0%, transparent 60%);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 3px;
+      padding: 4px 12px;
+      margin-bottom: 16px;
+      clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 13px;
+      margin-top: 10px;
+      letter-spacing: 1px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 24px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 15px;
+      padding: 14px 18px;
+      outline: none;
+      letter-spacing: 1px;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    button {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 14px 28px;
+      text-transform: uppercase;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    button:hover { opacity: 0.85; }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .terminal {
+      display: none;
+      background: #050810;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 24px;
+    }
+
+    .terminal.visible { display: block; }
+
+    .term-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; }
+    .dot.y { background: #febc2e; }
+    .dot.g { background: #28c840; }
+
+    .term-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: 8px;
+      letter-spacing: 1px;
+    }
+
+    #log {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.8;
+      max-height: 320px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line { display: block; }
+    .log-line.ok   { color: var(--green); }
+    .log-line.info { color: #60a5fa; }
+    .log-line.err  { color: var(--accent); }
+    .log-line.fofa { color: #fbbf24; font-weight: bold; }
+
+    .cursor {
+      display: inline-block;
+      width: 8px; height: 14px;
+      background: var(--green);
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+      margin-left: 2px;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    #download-section {
+      display: none;
+      text-align: center;
+    }
+
+    #download-section.visible { display: block; }
+
+    .dl-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--green);
+      color: #0a0e1a;
+      border-radius: 8px;
+      padding: 16px 36px;
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      letter-spacing: 1px;
+      transition: opacity 0.2s;
+    }
+
+    .dl-btn:hover { opacity: 0.85; }
+
+    .dl-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 10px;
+      letter-spacing: 1px;
+    }
+
+    footer {
+      margin-top: 48px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-badge">// CYBER INTELLIGENCE</div>
+    <h1>CVE <span>Intelligence</span><br>Report System</h1>
+    <p class="subtitle">// THREAT ANALYSIS</p>
+  </header>
+
+  <div class="card">
+    <div class="input-row">
+      <input type="text" id="cve-input" placeholder="CVE-2024-21762" maxlength="20" />
+      <button id="gen-btn" onclick="generate()">Generate</button>
+    </div>
+  </div>
+
+  <div class="terminal" id="terminal">
+    <div class="term-header">
+      <div class="dot r"></div>
+      <div class="dot y"></div>
+      <div class="dot g"></div>
+      <span class="term-title">PIPELINE OUTPUT</span>
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <div id="download-section">
+    <a class="dl-btn" id="dl-link" href="#">
+      ⬇ Download PDF Report
+    </a>
+    <p class="dl-label" id="dl-label"></p>
+  </div>
+
+  <footer>CONFIDENTIAL</footer>
+
+  <script>
+    function generate() {
+      const cveId = document.getElementById("cve-input").value.trim().toUpperCase();
+      if (!cveId.match(/^CVE-\d{4}-\d+$/)) {
+        alert("Please enter a valid CVE ID e.g. CVE-2024-21762");
+        return;
+      }
+
+      const btn = document.getElementById("gen-btn");
+      const terminal = document.getElementById("terminal");
+      const log = document.getElementById("log");
+      const dlSection = document.getElementById("download-section");
+
+      btn.disabled = true;
+      btn.textContent = "Running...";
+      terminal.classList.add("visible");
+      dlSection.classList.remove("visible");
+      log.innerHTML = '<span class="cursor"></span>';
+
+      fetch("/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cve_id: cveId })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) { appendLog(data.error, "err"); return; }
+        listenStream(data.job_id, cveId);
+      });
+    }
+
+    function listenStream(jobId, cveId) {
+      const es = new EventSource(`/stream/${jobId}`);
+      es.onmessage = (e) => {
+        const msg = e.data;
+
+        if (msg.startsWith("DONE:ok:")) {
+          es.close();
+          showDownload(cveId);
+          document.getElementById("gen-btn").disabled = false;
+          document.getElementById("gen-btn").textContent = "Generate";
+          return;
+        }
+
+        if (msg.startsWith("DONE:error")) {
+          es.close();
+          appendLog("Pipeline failed.", "err");
+          document.getElementById("gen-btn").disabled = false;
+          document.getElementById("gen-btn").textContent = "Generate";
+          return;
+        }
+
+        let cls = "info";
+        if (msg.startsWith("[+]")) cls = "ok";
+        if (msg.startsWith("[!]")) cls = "err";
+        if (msg.includes("FOFA:"))  cls = "fofa";
+        appendLog(msg, cls);
+      };
+    }
+
+    function appendLog(msg, cls) {
+      const log = document.getElementById("log");
+      const cursor = log.querySelector(".cursor");
+      const span = document.createElement("span");
+      span.className = `log-line ${cls}`;
+      span.textContent = msg;
+      if (cursor) log.insertBefore(span, cursor);
+      else log.appendChild(span);
+      const br = document.createElement("br");
+      if (cursor) log.insertBefore(br, cursor);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function showDownload(cveId) {
+      const dl = document.getElementById("download-section");
+      const link = document.getElementById("dl-link");
+      const label = document.getElementById("dl-label");
+      link.href = `/download/${cveId}`;
+      label.textContent = `// ${cveId}_report.pdf READY`;
+      dl.classList.add("visible");
+    }
+
+    document.getElementById("cve-input").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") generate();
+    });
+  </script>
+</body>
+</html>
