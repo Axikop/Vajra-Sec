@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body { height: 100%; }
+  body {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background:
+      radial-gradient(ellipse at 8% 0%, rgba(59,130,246,0.06) 0%, transparent 55%),
+      radial-gradient(ellipse at 100% 0%, rgba(220,38,38,0.05) 0%, transparent 55%),
+      #0b0d10;
+    background-attachment: fixed;
+  }
+  ::selection { background: rgba(59,130,246,0.35); color: #fff; }
+}
+
+@layer components {
+  .glass {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+    border: 1px solid theme("colors.border");
+    backdrop-filter: blur(8px);
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: theme("colors.border"); border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+}
