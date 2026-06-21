@@ -1,15 +1,13 @@
 """
-core/fofa_gpt.py
------------------
-FofaGPT — natural-language to FOFA query, inspired by Censys' CensysGPT.
+Trying to make a custom FOFA GPT than turns natural language query into FOFA structured query.
+(inspired by censysGPT)
 
 CensysGPT works because Censys fine-tuned an internal model on millions of
-(prompt, query) pairs they own. We can't replicate that, but we can do
-something pragmatic that works well in practice:
+(prompt, query) pairs they own. ofc I can't replicate that, but a makeshift i found:
 
     1. Few-shot prompt the local Ollama LLM (Qwen 2.5 3B) with curated
        (natural-language description, FOFA query) examples sourced from
-       fofabot's own tweets — these queries are hand-vetted by experts.
+       fofabot's own tweets(from X)
     2. Constrain the model output to a strict JSON schema so it can never
        emit malformed structures.
     3. Run the candidate query through the same `_validate_fofa_query`
@@ -42,9 +40,7 @@ logger = logging.getLogger(__name__)
 OLLAMA_CHAT_URL = f"{OLLAMA_BASE_URL.rstrip('/')}/api/chat"
 
 
-# Words that should never be the value inside a FOFA field=value pair.
-# These are syntax placeholders or generic English the model might echo
-# from the prompt instead of identifying a real product.
+
 _BANNED_VALUE_TOKENS = {
     "query", "value", "field", "syntax", "example",
     "find", "exposed", "search", "result", "results",
@@ -52,22 +48,22 @@ _BANNED_VALUE_TOKENS = {
     "anything", "everything", "stuff", "data",
     "test", "todo", "xxx", "placeholder",
     "product", "app", "banner", "host", "domain",
+    "any", "all", "some", "various", "none", "null", "n/a", "na",
 }
 
 
 def _has_banned_value(q: str) -> bool:
     """
     Return True if any FOFA field=value pair uses a banned generic word
-    as its value. Catches LLM hallucinations like body*="query".
+    as its value. Catches LLM hallucinations like title*="query".
     """
-    # Match field="value" and field*="value*"
-    for m in re.finditer(r'\w+\*?="([^"]+)"', q):
+
+    for m in re.finditer(r'[\w.]+\*?="([^"]+)"', q):
         val = m.group(1).strip().strip("*").lower()
         if not val:
             return True
         if val in _BANNED_VALUE_TOKENS:
             return True
-        # Single-character or super-short non-numeric values
         if len(val) <= 2 and not val.isdigit() and val != "in":
             return True
     return False
@@ -81,7 +77,11 @@ def _validate_fofa_query_lenient(q: str) -> bool:
     """
     if not q or len(q) > 500:
         return False
-    if not re.search(r'\b(app|product|banner|body|title|host|server|cert|domain|protocol)\*?=', q):
+    if not re.search(
+        r'\b(app|product|banner|body|title|host|server|cert\.[a-z.]+|domain|protocol'
+        r'|asn|port|ip|os|cloud_name|is_cloud|org)\*?=',
+        q,
+    ):
         return False
     if q.count('"') % 2 != 0:
         return False
@@ -92,16 +92,12 @@ def _validate_fofa_query_lenient(q: str) -> bool:
         'rationale', 'confidence',
     )):
         return False
-    # Reject obviously garbage tail (Chinese characters, non-ASCII bracket noise)
     if re.search(r"[\u4e00-\u9fff]", q):
         return False
-    # Reject queries whose values are generic English placeholders
     if _has_banned_value(q):
         return False
     return True
 
-# ── Static seed examples (always present, supplemented by live fofabot) ──────
-# Hand-picked to cover the common shapes a user might ask for.
 SEED_EXAMPLES: list[dict] = [
     {
         "nl":     "find Roundcube webmail servers in India",
@@ -115,17 +111,17 @@ SEED_EXAMPLES: list[dict] = [
     },
     {
         "nl":     "FortiGate SSL VPN devices",
-        "query":  '(app="FortiOS" || app="Fortinet-SSL-VPN") && country="IN"',
+        "query":  '(app="FortiOS" || app="SSL-VPN") && country="IN"',
         "cve_id": None,
     },
     {
         "nl":     "Palo Alto GlobalProtect portals in India",
-        "query":  '(app="PAN-OS" || app="Palo-Alto-GlobalProtect") && country="IN"',
+        "query":  'title*="GlobalProtect" && country="IN"',
         "cve_id": None,
     },
     {
         "nl":     "Cisco IOS XE devices running version 17.9",
-        "query":  'app="Cisco-IOS-XE" && country="IN" && banner*="17.9.*"',
+        "query":  'product="Cisco-IOS-XE" && product.version="17.9" && country="IN"',
         "cve_id": None,
     },
     {
@@ -145,7 +141,7 @@ SEED_EXAMPLES: list[dict] = [
     },
     {
         "nl":     "Apache Tomcat instances",
-        "query":  'app="Apache-Tomcat" && country="IN"',
+        "query":  'app="APACHE-Tomcat" && country="IN"',
         "cve_id": None,
     },
     {
@@ -160,41 +156,61 @@ SEED_EXAMPLES: list[dict] = [
     },
     {
         "nl":     "VMware vCenter servers running version 7.x",
-        "query":  'app="VMware-vCenter" && country="IN" && banner*="7.*"',
+        "query":  'app="VMware-vCenter" && country="IN"',
         "cve_id": None,
     },
 ]
 
-# ── System prompt (kept tight; the heavy lifting is in the examples) ─────────
 SYSTEM_PROMPT = """[unused — kept only for backward compat. Stage 1 uses EXTRACTION_PROMPT.]"""
 
 
-# ── Stage 1: intent extraction ───────────────────────────────────────────────
+#Stage 1: intent extraction
 # This is a pure NLP task — read messy human input, identify the real
-# entities (product, version, country). The 3B model is reliable at this
-# because the output space is small and structured.
+#
 
-EXTRACTION_PROMPT = """You are a security analyst extracting search intent from a user's natural-language question about FOFA reconnaissance. Your only job is to identify the REAL product/technology and any version or country mentioned.
+EXTRACTION_PROMPT = """You are a security analyst extracting search intent from a user's natural-language question about FOFA reconnaissance. Your job is to identify every concrete, queryable attribute mentioned: product/technology, version, country, ASN, port(s), operating system, server software, cloud provider, certificate details, organization, and page content terms.
 
 Rules:
-- IGNORE filler English: "find", "exposed", "vulnerable", "query", "search", "show me", "for", "the", "any", "all".
-- products: list of actual products / technologies. Use canonical names (e.g. "Apache HTTP Server" not just "apache", "FortiOS" not "fortigate firewall", "Microsoft Exchange" not "exchange"). Empty list if none.
-- version_patterns: list of major.minor version numbers mentioned in dotted form (e.g. "7.4", "17.9"). Empty list if none.
-- country: ISO 2-letter country code if mentioned. Use "IN" if India is mentioned or implied. Use "ANY" if user explicitly says global/worldwide/everywhere. Default "IN".
-- is_actionable: true ONLY if you identified at least one concrete product/technology. False if the prompt is too vague ("find anything", "show me stuff") or non-product ("default credentials", "open ports").
+- IGNORE filler English: "find", "exposed", "vulnerable", "query", "search", "show me", "for", "the", "any", "all", "services", "devices", "running".
+- products: list of actual products / technologies for FOFA's app= rule matching. Use canonical names (e.g. "Apache HTTP Server" not "apache", "FortiOS" not "fortigate firewall"). Empty list if none mentioned.
+- version_patterns: list of major.minor version numbers in dotted form (e.g. "7.4", "17.9"). Empty list if none.
+- country: ISO 2-letter country code if mentioned. Use "IN" if India is mentioned or implied. Use "ANY" if explicitly global/worldwide, OR if an ASN is given. Default "IN" otherwise.
+- asn: autonomous system number as plain digits, no "AS" prefix. Null if not mentioned.
+- ports: list of port numbers as strings. Empty list if none mentioned. List explicit numbers only, never invent a range.
+- os: operating system name if explicitly mentioned (e.g. "CentOS", "Windows Server", "Ubuntu"). Null if not mentioned. Do NOT infer an OS from a product name (e.g. don't assume Linux just because nginx was mentioned).
+- server_software: web/app server software if explicitly distinct from the main product (e.g. "Microsoft-IIS/10", "nginx" when asked as the server, not the target product). Null if not mentioned or redundant with products.
+- cloud_provider: cloud provider name if mentioned (e.g. "AWS", "Azure", "Alibaba Cloud", "Aliyundun"). Null if not mentioned.
+- is_cloud: true if user wants ONLY cloud-hosted assets, false if user wants ONLY non-cloud/on-prem assets, null if not specified.
+- cert_org: organization name if user asks about certificate subject/issuer organization (e.g. "certs issued to X", "SSL cert for organization Y"). Null if not mentioned.
+- org: organization/ISP name if user asks generically about an organization's assets (NOT certificate-specific) (e.g. "assets belonging to BSNL"). Null if not mentioned.
+- content_terms: list of literal words/phrases the user wants matched in page title or body content (e.g. "title says login", "pages mentioning admin panel"). Empty list if none.
+- is_actionable: true if at least one concrete attribute was identified (product, asn, port, os, server_software, cloud_provider, cert_org, org, or content_terms). False only if NOTHING concrete was found.
 - summary: one-line plain-English restatement of what the user wants.
 
 Examples:
-"find me exposed query for apache"          -> products=["Apache HTTP Server"], country="IN", is_actionable=true
-"FortiGate firewalls in India"               -> products=["FortiOS"], country="IN", is_actionable=true
-"Cisco IOS XE devices running 17.9"          -> products=["Cisco IOS XE"], version_patterns=["17.9"], country="IN", is_actionable=true
-"Apache Tomcat instances globally"           -> products=["Apache Tomcat"], country="ANY", is_actionable=true
-"Microsoft Exchange ProxyShell servers"      -> products=["Microsoft Exchange"], country="IN", is_actionable=true
-"find anything"                              -> products=[], is_actionable=false
-"devices with default SSH credentials"       -> products=[], is_actionable=false (no concrete product)
-"MikroTik routers in BSNL network"           -> products=["MikroTik RouterOS"], country="IN", is_actionable=true
-"roundcube webmail exposed"                  -> products=["Roundcube Webmail"], country="IN", is_actionable=true
-"Palo Alto GlobalProtect VPN"                -> products=["PAN-OS","Palo Alto GlobalProtect"], country="IN", is_actionable=true
+"find me exposed query for apache"                          -> products=["Apache HTTP Server"], country="IN", is_actionable=true
+"FortiGate firewalls in India"                                -> products=["FortiOS"], country="IN", is_actionable=true
+"Cisco IOS XE devices running 17.9"                           -> products=["Cisco IOS XE"], version_patterns=["17.9"], country="IN", is_actionable=true
+"show me all the services with apps running apache in asn 9829" -> products=["Apache HTTP Server"], country="ANY", asn="9829", is_actionable=true
+"show me nginx running on port 8080, 8443"                    -> products=["nginx"], country="IN", ports=["8080","8443"], is_actionable=true
+"everything in ASN 13335"                                     -> products=[], country="ANY", asn="13335", is_actionable=true
+"CentOS servers running Microsoft IIS in India"                -> products=[], country="IN", os="CentOS", server_software="Microsoft-IIS", is_actionable=true
+"nginx servers on AWS in India"                                -> products=["nginx"], country="IN", cloud_provider="AWS", is_cloud=true, server_software=null, os=null, is_actionable=true
+"assets hosted on AWS in India"                                -> products=[], country="IN", cloud_provider="AWS", is_cloud=true, is_actionable=true
+"non-cloud servers in ASN 9829"                                -> products=[], country="ANY", asn="9829", is_cloud=false, is_actionable=true
+"certificates issued to Oracle Corporation"                    -> products=[], country="ANY", cert_org="Oracle Corporation", is_actionable=true
+"BSNL network assets running nginx"                            -> products=["nginx"], country="IN", org="BSNL", is_actionable=true
+"pages with title containing login panel"                      -> products=[], country="IN", content_terms=["login panel"], is_actionable=true
+"find anything"                                               -> products=[], is_actionable=false
+"devices with default SSH credentials"                         -> products=[], is_actionable=false
+
+CRITICAL: os, server_software, cloud_provider, cert_org, and org are each
+INDEPENDENT signals. Only fill a field when the prompt contains a clear,
+specific signal for THAT field. Do not fill server_software just because
+the prompt mentions a product, an OS, or "in India" — those are unrelated.
+A prompt with NO server/OS keyword anywhere in it must have
+server_software=null and os=null, even if a past example you've seen used
+those fields for a superficially similar-looking prompt.
 
 Respond with JSON matching the schema."""
 
@@ -205,20 +221,30 @@ EXTRACTION_SCHEMA = {
         "products":         {"type": "array",   "items": {"type": "string"}},
         "version_patterns": {"type": "array",   "items": {"type": "string"}},
         "country":          {"type": "string"},
+        "asn":              {"type": ["string", "null"]},
+        "ports":            {"type": "array",   "items": {"type": "string"}},
+        "os":               {"type": ["string", "null"]},
+        "server_software":  {"type": ["string", "null"]},
+        "cloud_provider":   {"type": ["string", "null"]},
+        "is_cloud":         {"type": ["boolean", "null"]},
+        "cert_org":         {"type": ["string", "null"]},
+        "org":              {"type": ["string", "null"]},
+        "content_terms":    {"type": "array",   "items": {"type": "string"}},
         "is_actionable":    {"type": "boolean"},
         "summary":          {"type": "string"},
     },
-    "required": ["products", "version_patterns", "country", "is_actionable", "summary"],
+    "required": [
+        "products", "version_patterns", "country", "asn", "ports",
+        "os", "server_software", "cloud_provider", "is_cloud",
+        "cert_org", "org", "content_terms", "is_actionable", "summary",
+    ],
 }
 
 
 # ── JSON schema for stage 2 (deprecated, kept for backward compat) ──────────
-# Stage 2 architecture composes queries deterministically and no longer
-# round-trips through this schema. EXTRACTION_SCHEMA above is the active one.
 RESPONSE_SCHEMA = EXTRACTION_SCHEMA
 
 
-# ── Live example fetch (best-effort, fast) ───────────────────────────────────
 def _fetch_fofabot_examples(limit: int = 8) -> list[dict]:
     """
     Pull a handful of live fofabot tweets and turn them into NL/query pairs.
@@ -239,7 +265,6 @@ def _fetch_fofabot_examples(limit: int = 8) -> list[dict]:
             desc   = t.get("description") or ""
             if not cve_id or not query:
                 continue
-            # Construct an NL prompt from the description if present
             if desc:
                 nl = f"find devices vulnerable to {cve_id} ({desc[:80]})"
             else:
@@ -279,16 +304,12 @@ def get_fofabot_examples(limit: int = 12) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-# ── Build the few-shot user message (kept for legacy callers) ────────────────
-# Stage 2 architecture doesn't use few-shot anymore — this function is
-# retained only because nothing should silently break if it's still imported
-# elsewhere. Do NOT use for new code.
+
 def _build_few_shot(prompt: str) -> tuple[str, list[dict]]:
     from core.fofa_rag import retrieve
     return prompt, retrieve(prompt, k=6)
 
 
-# ── Ollama call ──────────────────────────────────────────────────────────────
 def _call_ollama(system: str, user_message: str, schema: Optional[dict] = None,
                  max_tokens: int = 400) -> Optional[dict]:
     payload = {
@@ -321,13 +342,10 @@ def _call_ollama(system: str, user_message: str, schema: Optional[dict] = None,
         logger.error(f"[FofaGPT] Ollama error: {e}")
         return None
 
-    # Strip stray markdown fences
     content = content.strip().strip("`").strip()
     if content.startswith("json"):
         content = content[4:].strip()
 
-    # Some models continue rambling after the closing brace. Extract just
-    # the first JSON object using a balanced-brace scan.
     if content.startswith("{"):
         depth = 0
         end = -1
@@ -362,7 +380,6 @@ def _call_ollama(system: str, user_message: str, schema: Optional[dict] = None,
         return None
 
 
-# ── Public entrypoint (two-stage pipeline) ───────────────────────────────────
 def nl_to_fofa(prompt: str) -> dict:
     """
     Translate a natural-language reconnaissance prompt into a validated
@@ -373,7 +390,7 @@ def nl_to_fofa(prompt: str) -> dict:
         Stage 2 (Python) : compose the FOFA query deterministically from
                            the curated FOFA app catalog. No hallucinations
                            possible — if a product isn't in the catalog
-                           we fall back to a fuzzy `body*=` match against
+                           we fall back to a fuzzy `title*=` match against
                            the literal product name (NOT against random
                            English words from the prompt).
 
@@ -391,7 +408,6 @@ def nl_to_fofa(prompt: str) -> dict:
     if len(prompt) > 500:
         return _empty_response("Prompt too long. Keep it under 500 characters.")
 
-    # Stage 1 — LLM extracts intent
     intent_msg, hits = _build_extraction_message(prompt)
     intent_raw = _call_ollama(
         EXTRACTION_PROMPT, intent_msg, schema=EXTRACTION_SCHEMA, max_tokens=300,
@@ -413,20 +429,27 @@ def nl_to_fofa(prompt: str) -> dict:
         }
 
     intent = _normalize_intent(intent_raw)
+    intent = _ground_intent(intent, prompt)
 
-    if not intent["is_actionable"] or not intent["products"]:
+    has_any_attribute = bool(
+        intent["products"] or intent["asn"] or intent["ports"]
+        or intent["os"] or intent["server_software"] or intent["cloud_provider"]
+        or intent["is_cloud"] is not None or intent["cert_org"] or intent["org"]
+        or intent["content_terms"]
+    )
+    if not intent["is_actionable"] or not has_any_attribute:
         return {
             "query":         None,
             "confidence":    "low",
             "rationale":     intent.get("summary") or
-                             "Could not identify a concrete product to search for. "
-                             "Try naming the product, vendor, or technology explicitly.",
+                             "Could not identify a concrete attribute to search for. "
+                             "Try naming a product, ASN, port, OS, server, cloud provider, "
+                             "certificate organization, or page content term explicitly.",
             "examples_used": examples_used,
             "valid":         False,
             "intent":        intent,
         }
 
-    # Stage 2 — deterministic query composition
     query, confidence, rationale = _compose_query_from_intent(intent)
 
     valid = bool(query) and _validate_fofa_query_lenient(query)
@@ -462,19 +485,138 @@ def _empty_response(reason: str) -> dict:
     }
 
 
+def _ground_intent(intent: dict, prompt: str) -> dict:
+    """
+    Precision guard against Stage-1 hallucination: drop any inferred attribute
+    field whose value has no basis in the user's prompt. The 3B model
+    occasionally invents e.g. server_software="Microsoft-IIS" for a prompt that
+    never mentions IIS, which would silently add false positives. A field is
+    kept only if a distinctive token (len>=3) of its value appears in the
+    prompt text. Products are NOT grounded — the catalog lookup is their gate,
+    and the model legitimately canonicalizes product names.
+    """
+    text = re.sub(r"[-_/]+", " ", (prompt or "").lower())
+
+    def grounded(value: str) -> bool:
+        toks = [t for t in re.split(r"[^a-z0-9.]+", value.lower()) if len(t) >= 3]
+        return any(t in text for t in toks) if toks else True
+
+    for f in ("server_software", "os", "cloud_provider", "cert_org", "org"):
+        v = intent.get(f)
+        if isinstance(v, str) and v and not grounded(v):
+            logger.info(f"[FofaGPT] dropping ungrounded {f}={v!r} (not in prompt)")
+            intent[f] = None
+
+    # Org/cert names: the model often hyphenates multi-word names ("Reliance
+    # Jio" -> "Reliance-Jio") which won't match the real cert/org string. Real
+    # org names are space-separated, so un-hyphenate.
+    for f in ("cert_org", "org"):
+        v = intent.get(f)
+        if isinstance(v, str) and "-" in v:
+            intent[f] = v.replace("-", " ").strip()
+
+
+    ct = intent.get("content_terms") or []
+    if ct:
+        signals = ("title", "body", "page", "header", "says", "contain",
+                   "reads", "label", "heading", "text")
+        if not any(s in text for s in signals):
+            logger.info(f"[FofaGPT] dropping descriptor content_terms {ct} (no content-match signal in prompt)")
+            intent["content_terms"] = []
+        else:
+            cleaned = []
+            for t in ct:
+                t2 = t.strip().strip('"\'').lower()
+                t2 = re.sub(r"^(the\s+)?(title|page|body|header)\s*(says|reads|contains?|containing|with|:)?\s*", "", t2).strip()
+                t2 = re.sub(r"^(says|reads|contains?|containing|with|that|of)\s+", "", t2).strip()
+                t2 = re.sub(r"\s+in\s+(the\s+)?(title|body|page|header)$", "", t2).strip()
+                if t2 and len(t2) >= 2 and t2 not in cleaned:
+                    cleaned.append(t2)
+            intent["content_terms"] = cleaned
+    return intent
+
+
 def _normalize_intent(raw: dict) -> dict:
-    products = [p.strip() for p in (raw.get("products") or []) if isinstance(p, str) and p.strip()]
+    products = [
+        p.strip() for p in (raw.get("products") or [])
+        if isinstance(p, str) and p.strip() and p.strip().lower() not in _BANNED_VALUE_TOKENS
+    ]
     versions = [v.strip() for v in (raw.get("version_patterns") or []) if isinstance(v, str) and v.strip()]
     country  = (raw.get("country") or "IN").strip().upper()
     if country not in {"IN", "ANY"}:
-        # Pass through arbitrary 2-letter codes the model returns
         if not re.fullmatch(r"[A-Z]{2}", country):
             country = "IN"
+
+    # ASN — must be plain digits only. Strip a leading "AS"/"as"
+    asn_raw = raw.get("asn")
+    asn = None
+    if isinstance(asn_raw, str) and asn_raw.strip():
+        cleaned = re.sub(r"^(AS|as)", "", asn_raw.strip())
+        if cleaned.isdigit():
+            asn = cleaned
+
+    # Ports-keep only valid 1-65535 integers, deduplicated, capped at 8
+    ports_raw = raw.get("ports") or []
+    ports: list[str] = []
+    if isinstance(ports_raw, list):
+        for p in ports_raw:
+            p = str(p).strip()
+            if p.isdigit() and 0 < int(p) <= 65535 and p not in ports:
+                ports.append(p)
+            if len(ports) >= 8:
+                break
+
+    def _clean_str_field(value, max_len: int = 80) -> Optional[str]:
+        """Generic cleaner for free-text fields the LLM extracts. Rejects
+        empty/placeholder values and caps length so a runaway generation
+        can't blow up the query string."""
+        if not isinstance(value, str):
+            return None
+        v = value.strip()
+        if not v or v.lower() in _BANNED_VALUE_TOKENS:
+            return None
+        return v[:max_len]
+
+    os_name         = _clean_str_field(raw.get("os"))
+    server_software = _clean_str_field(raw.get("server_software"))
+    cloud_provider  = _clean_str_field(raw.get("cloud_provider"))
+    cert_org        = _clean_str_field(raw.get("cert_org"), max_len=120)
+    org             = _clean_str_field(raw.get("org"), max_len=120)
+
+    is_cloud_raw = raw.get("is_cloud")
+    is_cloud = is_cloud_raw if isinstance(is_cloud_raw, bool) else None
+
+    content_terms_raw = raw.get("content_terms") or []
+    content_terms: list[str] = []
+    if isinstance(content_terms_raw, list):
+        for t in content_terms_raw:
+            cleaned = _clean_str_field(t, max_len=60)
+            if cleaned and cleaned not in content_terms:
+                content_terms.append(cleaned)
+            if len(content_terms) >= 5:
+                break
+
+    has_any_attribute = bool(
+        products or asn or ports or os_name or server_software
+        or cloud_provider or is_cloud is not None or cert_org or org
+        or content_terms
+    )
+    is_actionable = bool(raw.get("is_actionable")) and has_any_attribute
+
     return {
         "products":         products,
         "version_patterns": versions,
         "country":          country,
-        "is_actionable":    bool(raw.get("is_actionable")) and bool(products),
+        "asn":              asn,
+        "ports":            ports,
+        "os":               os_name,
+        "server_software":  server_software,
+        "cloud_provider":   cloud_provider,
+        "is_cloud":         is_cloud,
+        "cert_org":         cert_org,
+        "org":              org,
+        "content_terms":    content_terms,
+        "is_actionable":    is_actionable,
         "summary":          (raw.get("summary") or "").strip(),
     }
 
@@ -507,114 +649,146 @@ def _build_extraction_message(prompt: str) -> tuple[str, list[dict]]:
     return "\n".join(lines), hits
 
 
-# ── Stage 2: deterministic query composition ─────────────────────────────────
 def _compose_query_from_intent(intent: dict) -> tuple[Optional[str], str, str]:
     """
-    Build a FOFA query from extracted intent using the same curated
-    catalog the CVE pipeline uses. Falls back to fuzzy body*= match
-    when a product isn't in the catalog.
+    Build a FOFA query from extracted intent using the VERIFIED catalog
+    (core/fofa_catalog.py — every tag confirmed live against this plan).
+
+    Precision-first: each product maps to a verified app=/product= tag, or to
+    server*= for products FOFA fingerprints via the server banner (IIS, Apache
+    httpd). Products with NO verified fingerprint are NOT turned into fuzzy
+    title*= guesses — that fuzzy fallback is the main false-positive source.
+    They are dropped and reported instead; if nothing queryable remains, the
+    query is refused (None) rather than emitting a noisy guess.
+
+    Composes independent clause builders (product, asn, port, os, server,
+    cloud, cert_org, org, content, country) joined with &&.
 
     Returns (query, confidence, rationale).
     """
-    from core.groq_enricher import _lookup_fofa_app, _sanitize_for_fofa_value
+    from core import fofa_catalog
 
-    products = intent["products"]
-    versions = intent["version_patterns"]
-    country  = intent["country"]
+    products        = intent["products"]
+    versions        = intent["version_patterns"]
+    country         = intent["country"]
+    asn             = intent.get("asn")
+    ports           = intent.get("ports") or []
+    os_name         = intent.get("os")
+    server_software = intent.get("server_software")
+    cloud_provider  = intent.get("cloud_provider")
+    is_cloud        = intent.get("is_cloud")
+    cert_org        = intent.get("cert_org")
+    org             = intent.get("org")
+    content_terms   = intent.get("content_terms") or []
 
-    # Map products to FOFA app= values via the catalog
-    fofa_apps: list[str] = []
-    fuzzy_terms: list[str] = []
+    #Map each product to a VERIFIED FOFA tag 
+    product_atoms: list[str] = []     # app="X" / product="X" / server*="X"
+    matched: list[str] = []           
+    unmapped: list[str] = []          # products with no verified fingerprint
     for p in products:
-        mapped = _lookup_fofa_app(p)
-        if mapped:
-            if mapped not in fofa_apps:
-                fofa_apps.append(mapped)
-        else:
-            # Use the product name itself as the fuzzy term — never random
-            # English words from the prompt, since intent extraction already
-            # filtered those out.
-            term = _sanitize_for_fofa_value(p)
-            if term and term not in fuzzy_terms:
-                fuzzy_terms.append(term)
+        entry = fofa_catalog.lookup(p)
+        if entry:
+            atom = entry["clause"]
+            if atom not in product_atoms:
+                product_atoms.append(atom)
+                matched.append(atom)
+            continue
+        unmapped.append(p)
 
     confidence = "high"
     rationale_bits: list[str] = []
+    clauses: list[str] = []
 
-    # Primary product clause
-    if fofa_apps and not fuzzy_terms:
-        if len(fofa_apps) == 1:
-            clause = f'app="{fofa_apps[0]}"'
-        else:
-            inner  = " || ".join(f'app="{a}"' for a in fofa_apps)
-            clause = f"({inner})"
+    product_clause: Optional[str] = None
+    if product_atoms:
+        product_clause = (product_atoms[0] if len(product_atoms) == 1
+                          else "(" + " || ".join(product_atoms) + ")")
         rationale_bits.append(
-            f"Matched {len(fofa_apps)} product(s) in the FOFA catalog: "
-            + ", ".join(fofa_apps)
+            f"Matched {len(matched)} verified FOFA fingerprint(s): {', '.join(matched)}."
         )
-    elif fofa_apps and fuzzy_terms:
-        # Mix: catalog hits plus fuzzy fallback for unknown products
-        cat_clause = (
-            f'app="{fofa_apps[0]}"' if len(fofa_apps) == 1
-            else "(" + " || ".join(f'app="{a}"' for a in fofa_apps) + ")"
-        )
-        fuz_clause = (
-            f'body*="{fuzzy_terms[0]}"' if len(fuzzy_terms) == 1
-            else "(" + " || ".join(f'body*="{t}"' for t in fuzzy_terms) + ")"
-        )
-        clause = f"({cat_clause} || {fuz_clause})"
-        confidence = "medium"
+    if unmapped:
+        confidence = "medium" if product_atoms else "low"
         rationale_bits.append(
-            f"Catalog match for: {', '.join(fofa_apps)}. "
-            f"Fuzzy fallback for: {', '.join(fuzzy_terms)}."
+            "No verified FOFA fingerprint for: " + ", ".join(unmapped)
+            + " — omitted rather than emitting a fuzzy guess (would add false positives). "
+            "Look the product up in FOFA's web-UI TOP PRODUCTS facet to add a verified tag."
         )
-    elif fuzzy_terms:
-        if len(fuzzy_terms) == 1:
-            clause = f'body*="{fuzzy_terms[0]}"'
-        else:
-            inner  = " || ".join(f'body*="{t}"' for t in fuzzy_terms)
-            clause = f"({inner})"
-        confidence = "medium"
-        rationale_bits.append(
-            "No catalog match — using fuzzy body match against: "
-            + ", ".join(fuzzy_terms)
-        )
-    else:
-        return None, "low", "No product extracted from the prompt."
 
-    # Country clause
-    if country == "ANY":
-        query = clause
-        rationale_bits.append("Global scope (no country filter).")
-    else:
-        query = f'{clause} && country="{country}"'
+    if product_clause:
+        clauses.append(product_clause)
+
+    if asn:
+        clauses.append(f'asn="{asn}"')
+        rationale_bits.append(f'Restricted to asn="{asn}".')
+
+    if ports:
+        if len(ports) == 1:
+            clauses.append(f'port="{ports[0]}"')
+        else:
+            inner = " || ".join(f'port="{p}"' for p in ports)
+            clauses.append(f"({inner})")
+        rationale_bits.append(f"Restricted to port(s): {', '.join(ports)}.")
+
+    if os_name:
+        clauses.append(f'os="{os_name}"')
+        rationale_bits.append(f'Restricted to os="{os_name}".')
+
+ 
+    if server_software:
+        clauses.append(f'server*="{server_software}"')
+        rationale_bits.append(f'Restricted to server*="{server_software}".')
+
+    if cloud_provider:
+        clauses.append(f'cloud_name="{cloud_provider}"')
+        rationale_bits.append(f'Restricted to cloud_name="{cloud_provider}".')
+    elif is_cloud is not None:
+        
+        clauses.append(f'is_cloud={"true" if is_cloud else "false"}')
+        rationale_bits.append(f'Restricted to is_cloud={"true" if is_cloud else "false"}.')
+
+    if cert_org:
+        clauses.append(f'cert.subject.org="{cert_org}"')
+        rationale_bits.append(f'Restricted to cert.subject.org="{cert_org}".')
+
+    if org:
+        clauses.append(f'org="{org}"')
+        rationale_bits.append(f'Restricted to org="{org}".')
+
+  
+    for term in content_terms:
+        clauses.append(f'title*="{term}"')
+        rationale_bits.append(f'Content match: title*="{term}".')
+
+    if not clauses:
+        return None, "low", "No queryable attribute extracted from the prompt."
+
+    if country != "ANY" and not asn:
+        clauses.append(f'country="{country}"')
         rationale_bits.append(f'Restricted to country="{country}".')
+    elif country == "ANY":
+        rationale_bits.append("Global scope (no country filter).")
 
-    # Optional version narrowing — only when we have a high-confidence app=
-    # match AND clean major.minor patterns. Same operator (banner*=) the
-    # CVE pipeline uses.
-    if versions and fofa_apps and not fuzzy_terms:
-        clean = []
-        for v in versions:
-            m = re.fullmatch(r"\d{1,2}\.\d{1,3}", v)
-            if m and v not in clean:
-                clean.append(v)
-            if len(clean) >= 4:
-                break
-        if clean:
-            if len(clean) == 1:
-                ver_clause = f'banner*="{clean[0]}.*"'
-            else:
-                inner = " || ".join(f'banner*="{c}.*"' for c in clean)
-                ver_clause = f"({inner})"
-            query = f"{query} && {ver_clause}"
-            rationale_bits.append(f"Version filter: {', '.join(clean)}.")
+
+    _seen: set = set()
+    clauses = [c for c in clauses if not (c in _seen or _seen.add(c))]
+
+    query = " && ".join(clauses)
+
+    # NOTE: no version narrowing. On this plan `product.version=` is denied
+    # (820021, Business+/F-point) and `banner*=` fuzzy is rejected (820134);
+    # the only option, exact `banner="7.4"`, matches almost nothing (the
+    # version must BE the entire banner) 
+    if versions and product_atoms:
+        rationale_bits.append(
+            "Affected version(s) " + ", ".join(versions[:4]) + " noted — not "
+            "added as a filter (FOFA version search needs Business+/F-points; "
+            "review results manually)."
+        )
 
     rationale = " ".join(rationale_bits)
     return query, confidence, rationale
 
 
-# ── Self-test ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -625,6 +799,17 @@ if __name__ == "__main__":
         "Apache Tomcat instances globally",
         "find anything",   # too vague
         "Microsoft Exchange servers vulnerable to ProxyShell",
+        "show me all the services with apps running apache in asn 9829",
+        "show me nginx running on port 8080, 8443",
+        # asn/port edge cases
+        "everything in ASN 13335",          
+        "what's running on port 3389 in India", 
+        "CentOS servers running Microsoft IIS in India",
+        "assets hosted on AWS in India",
+        "non-cloud servers in ASN 9829",
+        "certificates issued to Oracle Corporation",
+        "BSNL network assets running nginx",
+        "pages with title containing login panel",
     ]
     for t in tests:
         r = nl_to_fofa(t)

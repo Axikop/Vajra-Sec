@@ -1,0 +1,812 @@
+{
+  "nginx": {
+    "field": "app",
+    "in": 4851756,
+    "global": 496613538
+  },
+  "Windows": {
+    "field": "app",
+    "in": 1093865,
+    "global": 42903451
+  },
+  "OpenSSH": {
+    "field": "app",
+    "in": 1062952,
+    "global": 172116984
+  },
+  "LiteSpeed": {
+    "field": "app",
+    "in": 836051,
+    "global": 34153617
+  },
+  "WordPress": {
+    "field": "app",
+    "in": 812052,
+    "global": 60090993
+  },
+  "Node.js": {
+    "field": "app",
+    "in": 422617,
+    "global": 12961479
+  },
+  "OpenResty": {
+    "field": "app",
+    "in": 312070,
+    "global": 74413188
+  },
+  "Next.js": {
+    "field": "app",
+    "in": 310539,
+    "global": 7175914
+  },
+  "openssl": {
+    "field": "app",
+    "in": 291966,
+    "global": 13283907
+  },
+  "Jetty": {
+    "field": "app",
+    "in": 234548,
+    "global": 5493611
+  },
+  "RDP": {
+    "field": "app",
+    "in": 203866,
+    "global": 9685736
+  },
+  "MikroTik-RouterOS": {
+    "field": "app",
+    "in": 195810,
+    "global": 3639248
+  },
+  "MySQL": {
+    "field": "app",
+    "in": 175078,
+    "global": 15272659
+  },
+  "APACHE-Tomcat": {
+    "field": "app",
+    "in": 160590,
+    "global": 4747324
+  },
+  "PostgreSQL": {
+    "field": "app",
+    "in": 89208,
+    "global": 2665569
+  },
+  "Atlassian-Confluence": {
+    "field": "app",
+    "in": 89010,
+    "global": 1520727
+  },
+  "WebLogic-Server": {
+    "field": "app",
+    "in": 86762,
+    "global": 1408239
+  },
+  "Exim-Mail-Server": {
+    "field": "app",
+    "in": 77975,
+    "global": 5856276
+  },
+  "Cisco-Router": {
+    "field": "app",
+    "in": 72501,
+    "global": 1245394
+  },
+  "paloalto-GlobalProtect": {
+    "field": "app",
+    "in": 65256,
+    "global": 1122857
+  },
+  "FORTINET-FortiManager": {
+    "field": "app",
+    "in": 65154,
+    "global": 1085555
+  },
+  "CyberPanel": {
+    "field": "app",
+    "in": 64161,
+    "global": 1146006
+  },
+  "Ollama": {
+    "field": "app",
+    "in": 62365,
+    "global": 1100241
+  },
+  "Postfix": {
+    "field": "app",
+    "in": 61145,
+    "global": 4328158
+  },
+  "FortiManager-VM64": {
+    "field": "app",
+    "in": 61056,
+    "global": 1011906
+  },
+  "FortiSwitch": {
+    "field": "app",
+    "in": 59894,
+    "global": 1000074
+  },
+  "FORTINET-FortiSwitch": {
+    "field": "app",
+    "in": 59894,
+    "global": 1004645
+  },
+  "servicenow-Products": {
+    "field": "app",
+    "in": 58793,
+    "global": 992178
+  },
+  "ZYXEL-USG310": {
+    "field": "app",
+    "in": 57947,
+    "global": 969299
+  },
+  "MongoDB": {
+    "field": "app",
+    "in": 55346,
+    "global": 1212032
+  },
+  "drupal": {
+    "field": "app",
+    "in": 52243,
+    "global": 1527394
+  },
+  "Ivanti-Connect-Secure": {
+    "field": "app",
+    "in": 49373,
+    "global": 813265
+  },
+  "Pulse-Connect-Secure": {
+    "field": "app",
+    "in": 49373,
+    "global": 817897
+  },
+  "Microsoft-SQL-Server": {
+    "field": "app",
+    "in": 46892,
+    "global": 1655568
+  },
+  "Dovecot": {
+    "field": "app",
+    "in": 46802,
+    "global": 4734406
+  },
+  "Redis": {
+    "field": "app",
+    "in": 40892,
+    "global": 1963565
+  },
+  "VNC": {
+    "field": "app",
+    "in": 38189,
+    "global": 17000731
+  },
+  "Django": {
+    "field": "app",
+    "in": 36099,
+    "global": 1483650
+  },
+  "Roundcube-Webmail": {
+    "field": "app",
+    "in": 27440,
+    "global": 1139466
+  },
+  "plesk-Obsidian": {
+    "field": "app",
+    "in": 26486,
+    "global": 1760387
+  },
+  "OpenVPN": {
+    "field": "app",
+    "in": 25568,
+    "global": 3123045
+  },
+  "MailEnable": {
+    "field": "app",
+    "in": 22670,
+    "global": 323328
+  },
+  "Jenkins": {
+    "field": "app",
+    "in": 21290,
+    "global": 268684
+  },
+  "SonicWall": {
+    "field": "app",
+    "in": 19635,
+    "global": 380654
+  },
+  "Proxmox-VE": {
+    "field": "app",
+    "in": 19484,
+    "global": 1139135
+  },
+  "Tomcat": {
+    "field": "app",
+    "in": 16242,
+    "global": 289070
+  },
+  "ERPNext": {
+    "field": "app",
+    "in": 14532,
+    "global": 114360
+  },
+  "Grafana": {
+    "field": "app",
+    "in": 13994,
+    "global": 670497
+  },
+  "Moodle": {
+    "field": "app",
+    "in": 11729,
+    "global": 487823
+  },
+  "Cisco-IOS": {
+    "field": "app",
+    "in": 10716,
+    "global": 215744
+  },
+  "JBoss": {
+    "field": "app",
+    "in": 10349,
+    "global": 3304941
+  },
+  "strapi-Headless-CMS": {
+    "field": "app",
+    "in": 8043,
+    "global": 165040
+  },
+  "ClickHouse": {
+    "field": "app",
+    "in": 7838,
+    "global": 169384
+  },
+  "Microsoft-Exchange": {
+    "field": "app",
+    "in": 7719,
+    "global": 1448110
+  },
+  "AVTECH-视频监控": {
+    "field": "app",
+    "in": 7682,
+    "global": 1229360
+  },
+  "F5-BIGIP": {
+    "field": "app",
+    "in": 7254,
+    "global": 1378730
+  },
+  "Webmin": {
+    "field": "app",
+    "in": 6699,
+    "global": 484416
+  },
+  "Elasticsearch": {
+    "field": "app",
+    "in": 6492,
+    "global": 220389
+  },
+  "GitLab": {
+    "field": "app",
+    "in": 6157,
+    "global": 350228
+  },
+  "Portainer": {
+    "field": "app",
+    "in": 5843,
+    "global": 657366
+  },
+  "Cisco-Firepower": {
+    "field": "app",
+    "in": 5649,
+    "global": 159847
+  },
+  "VMware-ESXi": {
+    "field": "app",
+    "in": 4578,
+    "global": 321112
+  },
+  "Kibana": {
+    "field": "app",
+    "in": 4212,
+    "global": 101165
+  },
+  "GlassFish": {
+    "field": "app",
+    "in": 3545,
+    "global": 144102
+  },
+  "OpenCart": {
+    "field": "app",
+    "in": 3510,
+    "global": 324374
+  },
+  "Nextcloud": {
+    "field": "app",
+    "in": 3506,
+    "global": 899970
+  },
+  "NETGEAR": {
+    "field": "app",
+    "in": 3177,
+    "global": 175293
+  },
+  "FORTINET-FortiMail": {
+    "field": "app",
+    "in": 3169,
+    "global": 54671
+  },
+  "APACHE-ActiveMQ": {
+    "field": "app",
+    "in": 3070,
+    "global": 3177370
+  },
+  "Microsoft-SharePoint": {
+    "field": "app",
+    "in": 3047,
+    "global": 283449
+  },
+  "pfSense": {
+    "field": "app",
+    "in": 3009,
+    "global": 243301
+  },
+  "WatchGuard-Firewall": {
+    "field": "app",
+    "in": 2877,
+    "global": 349767
+  },
+  "Joomla": {
+    "field": "app",
+    "in": 2672,
+    "global": 690214
+  },
+  "Palo-Alto-pan-os": {
+    "field": "app",
+    "in": 2444,
+    "global": 32206
+  },
+  "LiteLLM-API": {
+    "field": "app",
+    "in": 2436,
+    "global": 47496
+  },
+  "LOGSPACE-LangFlow": {
+    "field": "app",
+    "in": 2425,
+    "global": 37959
+  },
+  "IBM-WebSphere": {
+    "field": "app",
+    "in": 2243,
+    "global": 103874
+  },
+  "Gitea": {
+    "field": "app",
+    "in": 1888,
+    "global": 245182
+  },
+  "Usermin": {
+    "field": "app",
+    "in": 1802,
+    "global": 107703
+  },
+  "Ghost": {
+    "field": "app",
+    "in": 1613,
+    "global": 97145
+  },
+  "Wazuh": {
+    "field": "app",
+    "in": 1610,
+    "global": 25046
+  },
+  "Open-WebUI": {
+    "field": "app",
+    "in": 1565,
+    "global": 140043
+  },
+  "Oracle-iPlanet-Web-Server": {
+    "field": "app",
+    "in": 1512,
+    "global": 25456
+  },
+  "VMware-Horizon": {
+    "field": "app",
+    "in": 1346,
+    "global": 49965
+  },
+  "mlflow": {
+    "field": "app",
+    "in": 1324,
+    "global": 21414
+  },
+  "Adobe-Magento": {
+    "field": "app",
+    "in": 1324,
+    "global": 68520
+  },
+  "Magento": {
+    "field": "app",
+    "in": 1324,
+    "global": 68648
+  },
+  "SSL-VPN": {
+    "field": "app",
+    "in": 1319,
+    "global": 43461
+  },
+  "Astro": {
+    "field": "app",
+    "in": 1001,
+    "global": 17598
+  },
+  "InfluxDB": {
+    "field": "app",
+    "in": 962,
+    "global": 38064
+  },
+  "Atlassian-Jira": {
+    "field": "app",
+    "in": 941,
+    "global": 68349
+  },
+  "FreePBX": {
+    "field": "app",
+    "in": 885,
+    "global": 46934
+  },
+  "Neo4j": {
+    "field": "app",
+    "in": 825,
+    "global": 28925
+  },
+  "Observium": {
+    "field": "app",
+    "in": 786,
+    "global": 6396
+  },
+  "Citrix-Gateway": {
+    "field": "app",
+    "in": 754,
+    "global": 88691
+  },
+  "Traccar": {
+    "field": "app",
+    "in": 713,
+    "global": 79328
+  },
+  "sugarcrm": {
+    "field": "app",
+    "in": 703,
+    "global": 31772
+  },
+  "Liferay": {
+    "field": "app",
+    "in": 683,
+    "global": 50726
+  },
+  "Sophos-Firewall": {
+    "field": "app",
+    "in": 620,
+    "global": 9885
+  },
+  "geoserver": {
+    "field": "app",
+    "in": 588,
+    "global": 33972
+  },
+  "PrestaShop": {
+    "field": "app",
+    "in": 499,
+    "global": 201066
+  },
+  "ThinkPHP": {
+    "field": "app",
+    "in": 492,
+    "global": 453271
+  },
+  "Memcached": {
+    "field": "app",
+    "in": 460,
+    "global": 411593
+  },
+  "TYPO3": {
+    "field": "app",
+    "in": 423,
+    "global": 297270
+  },
+  "ownCloud": {
+    "field": "app",
+    "in": 390,
+    "global": 79461
+  },
+  "Sophos-UTM": {
+    "field": "app",
+    "in": 299,
+    "global": 74248
+  },
+  "Modbus": {
+    "field": "app",
+    "in": 263,
+    "global": 91800
+  },
+  "Adobe-ColdFusion": {
+    "field": "app",
+    "in": 260,
+    "global": 155899
+  },
+  "Chroma-ChromaDB": {
+    "field": "app",
+    "in": 253,
+    "global": 4538
+  },
+  "Kentico-CMS": {
+    "field": "app",
+    "in": 244,
+    "global": 32032
+  },
+  "LibreChat": {
+    "field": "app",
+    "in": 229,
+    "global": 14929
+  },
+  "FORTINET-FortiADC": {
+    "field": "app",
+    "in": 191,
+    "global": 2712
+  },
+  "Apache_OFBiz": {
+    "field": "app",
+    "in": 163,
+    "global": 1086
+  },
+  "Dify": {
+    "field": "app",
+    "in": 157,
+    "global": 60338
+  },
+  "nagios-xi": {
+    "field": "app",
+    "in": 143,
+    "global": 19157
+  },
+  "brother-Printer": {
+    "field": "app",
+    "in": 143,
+    "global": 45148
+  },
+  "Siemens-SIMATIC": {
+    "field": "app",
+    "in": 132,
+    "global": 9187
+  },
+  "BACnet": {
+    "field": "app",
+    "in": 111,
+    "global": 18453
+  },
+  "Citrix-ADC": {
+    "field": "app",
+    "in": 108,
+    "global": 2594
+  },
+  "SillyTavern": {
+    "field": "app",
+    "in": 108,
+    "global": 30653
+  },
+  "Virtualmin": {
+    "field": "app",
+    "in": 105,
+    "global": 11991
+  },
+  "dotnetnuke": {
+    "field": "app",
+    "in": 96,
+    "global": 64083
+  },
+  "APACHE-CloudStack": {
+    "field": "app",
+    "in": 90,
+    "global": 1823
+  },
+  "vBulletin": {
+    "field": "app",
+    "in": 79,
+    "global": 12038
+  },
+  "Juniper-JunOS": {
+    "field": "app",
+    "in": 67,
+    "global": 966
+  },
+  "Zimbra-Collaboration-Suite": {
+    "field": "app",
+    "in": 65,
+    "global": 1243
+  },
+  "Cisco-ISE": {
+    "field": "app",
+    "in": 58,
+    "global": 1065
+  },
+  "FORTINET-FortiAnalyzer": {
+    "field": "app",
+    "in": 55,
+    "global": 1235
+  },
+  "Github-Enterprise": {
+    "field": "app",
+    "in": 51,
+    "global": 25480
+  },
+  "Cisco-NX-OS": {
+    "field": "app",
+    "in": 50,
+    "global": 879
+  },
+  "D_Link-DIR-803": {
+    "field": "app",
+    "in": 42,
+    "global": 70
+  },
+  "TeamViewer": {
+    "field": "app",
+    "in": 38,
+    "global": 2620
+  },
+  "XWIKI-Platform": {
+    "field": "app",
+    "in": 34,
+    "global": 3959
+  },
+  "mojoportal": {
+    "field": "app",
+    "in": 22,
+    "global": 296
+  },
+  "MetInfo": {
+    "field": "app",
+    "in": 22,
+    "global": 57909
+  },
+  "VMware-vCenter": {
+    "field": "app",
+    "in": 19,
+    "global": 1047
+  },
+  "phpVMS": {
+    "field": "app",
+    "in": 14,
+    "global": 598
+  },
+  "paloalto-Firewall": {
+    "field": "app",
+    "in": 14,
+    "global": 1551
+  },
+  "phpMyFAQ": {
+    "field": "app",
+    "in": 13,
+    "global": 1164
+  },
+  "Cisco-IOS-XE": {
+    "field": "app",
+    "in": 13,
+    "global": 730
+  },
+  "apache-dubbo": {
+    "field": "app",
+    "in": 12,
+    "global": 1435644
+  },
+  "Fortinet-FortiWeb": {
+    "field": "app",
+    "in": 9,
+    "global": 776
+  },
+  "ZYXEL-NAS326": {
+    "field": "app",
+    "in": 8,
+    "global": 12396
+  },
+  "churchcrm": {
+    "field": "app",
+    "in": 8,
+    "global": 543
+  },
+  "SPIP": {
+    "field": "app",
+    "in": 7,
+    "global": 20459
+  },
+  "Rockwell-Automation": {
+    "field": "app",
+    "in": 6,
+    "global": 1116
+  },
+  "Powered-by-KodExplorer": {
+    "field": "app",
+    "in": 5,
+    "global": 6649
+  },
+  "FIT2CLOUD-DataEase": {
+    "field": "app",
+    "in": 4,
+    "global": 1789
+  },
+  "Cisco-Webex": {
+    "field": "app",
+    "in": 4,
+    "global": 5119
+  },
+  "D_Link-DNS-ShareCenter": {
+    "field": "app",
+    "in": 3,
+    "global": 33114
+  },
+  "Cockpit": {
+    "field": "app",
+    "in": 3,
+    "global": 1955
+  },
+  "Cisco-Meraki": {
+    "field": "app",
+    "in": 3,
+    "global": 1515
+  },
+  "DedeCMS": {
+    "field": "app",
+    "in": 2,
+    "global": 36552
+  },
+  "FORTINET-FortiNAC": {
+    "field": "app",
+    "in": 2,
+    "global": 295
+  },
+  "Yearning": {
+    "field": "app",
+    "in": 1,
+    "global": 764
+  },
+  "LINKSYS-E2000": {
+    "field": "app",
+    "in": 1,
+    "global": 246
+  },
+  "phpMyAdmin": {
+    "field": "product",
+    "in": null,
+    "global": 394849
+  },
+  "ProFTPD": {
+    "field": "product",
+    "in": null,
+    "global": 2032538
+  },
+  "vsftpd": {
+    "field": "product",
+    "in": null,
+    "global": 1600904
+  },
+  "Squid": {
+    "field": "product",
+    "in": null,
+    "global": 34093846
+  },
+  "HAProxy": {
+    "field": "product",
+    "in": null,
+    "global": 27497
+  },
+  "Kubernetes": {
+    "field": "product",
+    "in": null,
+    "global": 9695570
+  }
+}

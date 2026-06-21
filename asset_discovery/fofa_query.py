@@ -4,7 +4,6 @@ Takes enriched CVE data (product + version from the local LLM) and finds
 internet-facing devices in Indian critical infrastructure.
 
 NO active scanning — FOFA is a passive search engine (already crawled).
-Free tier: 300 queries/month, 100 results/query.
 
 Requires in config.py:
     FOFA_EMAIL   = "@email.com"
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 FOFA_API_URL = "https://fofa.info/api/v1/search/all"
 FOFA_SIZE    = 100   # max results per query on free tier
 
-# ── Indian ASNs for critical infra filtering ─────────────────────────────────
 INDIAN_ASNS = {
     "AS9829":   "BSNL",
     "AS4755":   "TATA Communications",
@@ -42,34 +40,6 @@ INDIAN_ASNS = {
 }
 
 
-PRODUCT_FOFA_MAP = {
-    "cisco ios":          'app="Cisco-IOS"',
-    "cisco ios xe":       'app="Cisco-IOS-XE"',
-    "cisco nx-os":        'app="Cisco-NX-OS"',
-    "cisco asa":          'app="Cisco-ASA"',
-    "cisco router":       'app="Cisco-IOS"',
-    "fortinet fortigate": 'app="Fortinet-FortiGate"',
-    "fortios":            'app="Fortinet-FortiGate"',
-    "juniper junos":      'app="Juniper-JunOS"',
-    "juniper":            'app="Juniper-JunOS"',
-    "palo alto":          'app="Palo-Alto-Networks-PAN-OS"',
-    "pan-os":             'app="Palo-Alto-Networks-PAN-OS"',
-    "microsoft windows":  'app="Windows"',
-    "microsoft exchange": 'app="Microsoft-Exchange"',
-    "huawei":             'app="Huawei"',
-    "zte":                'app="ZTE"',
-    "ericsson":           'app="Ericsson"',
-    "mikrotik":           'app="MikroTik-RouterOS"',
-    "routeros":           'app="MikroTik-RouterOS"',
-    "apache":             'app="Apache-httpd"',
-    "nginx":              'app="nginx"',
-    "openssl":            'title="openssl"',
-    "vmware esxi":        'app="VMware-ESXi"',
-    "vmware":             'app="VMware"',
-    "f5 big-ip":          'app="F5-BIG-IP"',
-    "big-ip":             'app="F5-BIG-IP"',
-    "siemens":            'app="Siemens"',
-}
 
 
 
@@ -77,21 +47,25 @@ def build_fofa_query(
     product: str,
     version: str = "",
     country: str = "IN",
-) -> str:
-    product_lower = product.lower().strip()
+) -> Optional[str]:
+    """
+    Map a product to a VERIFIED FOFA tag (via core.fofa_catalog) and anchor to
+    country. Returns None when no verified fingerprint exists — precision-first,
+    we no longer fall back to a `banner="<product>"` guess (which matched
+    almost nothing and produced noise). `version` is ignored: FOFA version
+    search needs Business+/F-points, which this plan lacks.
 
-    fofa_app = None
-    for key, val in PRODUCT_FOFA_MAP.items():
-        if key in product_lower or product_lower in key:
-            fofa_app = val
-            break
+    The single source of truth for product → FOFA fingerprint is now
+    core/fofa_catalog.py (the old unverified PRODUCT_FOFA_MAP was removed).
+    """
+    from core import fofa_catalog
 
-    if not fofa_app:
-        logger.warning(f"[FOFA] No app tag for '{product}', using banner search")
-        fofa_app = f'banner="{product}"'
+    entry = fofa_catalog.lookup(product)
+    if not entry:
+        logger.warning(f"[FOFA] no verified fingerprint for '{product}' — skipping")
+        return None
 
-    # version field is paid-only on FOFA — not included
-    query = " && ".join([fofa_app, f'country="{country}"'])
+    query = f'{entry["clause"]} && country="{country}"'
     logger.info(f"[FOFA] Built query: {query}")
     return query
 
@@ -160,16 +134,7 @@ def fofa_search(
 
 
 def filter_indian_critical_infra(results: list[dict]) -> list[dict]:
-    """
-    Filter FOFA results to only Indian critical infrastructure orgs
-    based on known ASNs.
-
-    Args:
-        results: raw FOFA result dicts
-
-    Returns:
-        Filtered list with an added 'org_name' key
-    """
+ 
     filtered = []
     for r in results:
         asn = r.get("asn", "").strip()
@@ -191,18 +156,10 @@ def find_affected_indian_assets(
     version: str = "",
     also_return_all: bool = False,
 ) -> list[dict]:
-    """
-    Full pipeline: build query → FOFA search → filter Indian critical infra.
-
-    Args:
-        product:         normalized product name from Groq enrichment
-        version:         affected version from Groq enrichment (optional)
-        also_return_all: if True, returns all Indian results not just CSO ASNs
-
-    Returns:
-        List of affected asset dicts with ip, port, host, org_name, asn
-    """
+   
     query   = build_fofa_query(product, version, country="IN")
+    if not query:
+        return []
     results = fofa_search(query)
 
     if not results:
@@ -210,11 +167,9 @@ def find_affected_indian_assets(
         return []
 
     if also_return_all:
-        # Return all Indian results (country=IN already filtered in query)
         logger.info(f"[FOFA] Returning all {len(results)} Indian results")
         return results
 
-    # Default: only known critical infra ASNs
     return filter_indian_critical_infra(results)
 
 
@@ -241,9 +196,7 @@ def find_assets_from_enriched(enriched: dict) -> list[dict]:
     seen_ips = set()
     all_assets = []
 
-    # Try each product, with and without version
     for product in products:
-        # Search without version first (broader)
         assets = find_affected_indian_assets(product)
         for asset in assets:
             ip = asset.get("ip", "")
@@ -252,8 +205,7 @@ def find_assets_from_enriched(enriched: dict) -> list[dict]:
                 all_assets.append(asset)
                 seen_ips.add(ip)
 
-        # Then narrow down with versions
-        for version in versions[:3]:   # limit to first 3 versions to save quota
+        for version in versions[:3]:   
             assets_v = find_affected_indian_assets(product, version)
             for asset in assets_v:
                 ip = asset.get("ip", "")
@@ -279,7 +231,6 @@ if __name__ == "__main__":
     assets = find_affected_indian_assets("cisco ios xe", version="")
     print(json.dumps(assets[:5], indent=2))   # print first 5
 
-    # Test 2: from enriched dict (simulated Groq output)
     print("\n=== Test 2: From enriched CVE dict ===")
     fake_enriched = {
         "cve_id":            "CVE-2024-20399",
